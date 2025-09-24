@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recipe & Meal Planner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #121212;
+        }
+
+        .gradient-bg {
+            background: linear-gradient(to bottom right, #ffffff, #f1f5f9);
+        }
+
+        .light-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border: 3px solid rgba(220, 220, 220, 0.7);
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+        }
+
+        .light-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 25px rgba(0, 0, 0, 0.15), 0 8px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        .btn {
+            @apply px-4 py-2 rounded-xl font-bold transition-transform transform;
+            border: 2px solid;
+        }
+
+        .btn-primary {
+            @apply bg-blue-600 text-white border-blue-700 hover:bg-blue-700 active:scale-95;
+        }
+
+        .btn-secondary {
+            @apply bg-gray-200 text-gray-800 border-gray-400 hover:bg-gray-300 active:scale-95;
+        }
+
+        .modal {
+            transition: all 0.3s ease;
+        }
+
+        /* Color classes for different cuisines */
+        .card-indian { background-color: #e0e7ff; border-color: #c7d2fe; }
+        .card-south-indian { background-color: #dcfce7; border-color: #bbf7d0; }
+        .card-chinese { background-color: #ffe4e6; border-color: #fecaca; }
+        .card-italian { background-color: #dbeafe; border-color: #bfdbfe; }
+        .card-soup { background-color: #d1fae5; border-color: #a7f3d0; }
+
+        .item-indian { background-color: #c7d2fe; }
+        .item-south-indian { background-color: #a7f3d0; }
+        .item-chinese { background-color: #fecaca; }
+        .item-italian { background-color: #bfdbfe; }
+        .item-soup { background-color: #86efac; }
+
+        .modal-item-indian { background-color: #a5b4fc; border-color: #818cf8; }
+        .modal-item-south-indian { background-color: #6ee7b7; border-color: #34d399; }
+        .modal-item-chinese { background-color: #fca5a5; border-color: #f87171; }
+        .modal-item-italian { background-color: #60a5fa; border-color: #3b82f6; }
+        .modal-item-soup { background-color: #34d399; border-color: #10b981; }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4 sm:p-8">
+<div id="app" class="w-full max-w-7xl mx-auto flex flex-col md:flex-row gap-8">
+    <!-- Main Content (Recipe Search) -->
+    <div class="flex-1 p-6 sm:p-8 light-card flex flex-col items-center">
+        <h1 class="text-3xl sm:text-4xl font-bold mb-6 text-center text-gray-800">Recipe Generator</h1>
+        <div class="w-full max-w-lg mb-6 flex flex-col sm:flex-row gap-4">
+            <input id="ingredient-input" type="text" placeholder="Enter ingredients (e.g., chicken, pasta)" class="flex-1 p-3 rounded-xl border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-800">
+            <button id="search-btn" class="btn btn-primary whitespace-nowrap">Search Recipes</button>
+        </div>
+
+        <!-- Loading and Error States -->
+        <div id="loading" class="hidden text-center py-4 text-gray-600">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-500 mx-auto"></div>
+            <p class="mt-2">Fetching recipes...</p>
+        </div>
+        <div id="error-message" class="hidden text-center py-4 text-red-500 font-medium"></div>
+
+        <!-- Recipe List -->
+        <div id="recipe-list" class="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Recipes will be dynamically inserted here -->
+        </div>
+    </div>
+
+    <!-- Meal Planner Sidebar -->
+    <div class="w-full md:w-80 p-6 sm:p-8 light-card flex flex-col">
+        <h2 class="text-2xl font-bold mb-4 text-gray-800">Your Meal Plan</h2>
+        <div id="meal-plan-list" class="flex-1 space-y-4 overflow-y-auto pr-2">
+            <!-- Meal plan items will be dynamically inserted here -->
+        </div>
+        <div class="mt-6 pt-4 border-t-2 border-gray-300">
+            <button id="generate-btn" class="btn btn-primary w-full">Generate Plan</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Meal Plan -->
+<div id="modal" class="modal fixed inset-0 z-50 overflow-y-auto bg-gray-900 bg-opacity-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl border-4 border-gray-300 shadow-xl w-full max-w-xl mx-auto p-6 sm:p-8 transform scale-95 transition-transform duration-300">
+        <div class="flex justify-between items-center pb-3 border-b-2 border-gray-300">
+            <h3 class="text-2xl font-bold text-gray-800">Your Weekly Meal Plan</h3>
+            <button id="close-modal-btn" class="text-gray-500 hover:text-gray-700 text-3xl font-light leading-none">&times;</button>
+        </div>
+        <div id="modal-content" class="mt-4">
+            <!-- Meal plan will be displayed here -->
+        </div>
+        <div class="mt-6 flex justify-end">
+            <button onclick="copyMealPlan()" class="btn btn-secondary">Copy to Clipboard</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const localRecipes = [
+        { id: 1, title: "Chicken Biryani (Indian)", image: "https://placehold.co/400x300/e0e7ff/64748b?text=Chicken+Biryani", sourceUrl: "#", extendedIngredients: [{ original: "1 lb chicken" }, { original: "1 cup basmati rice" }, { original: "1 onion" }, { original: "ginger-garlic paste" }, { original: "biryani spices" }] },
+        { id: 2, title: "Paneer Butter Masala (Indian)", image: "https://placehold.co/400x300/e0e7ff/64748b?text=Paneer+Masala", sourceUrl: "#", extendedIngredients: [{ original: "1 block paneer" }, { original: "butter" }, { original: "cream" }, { original: "tomato puree" }, { original: "Indian spices" }] },
+        { id: 3, title: "Masala Dosa (South Indian)", image: "https://placehold.co/400x300/dcfce7/64748b?text=Masala+Dosa", sourceUrl: "#", extendedIngredients: [{ original: "dosa batter" }, { original: "potatoes" }, { original: "onions" }, { original: "South Indian spices" }] },
+        { id: 4, title: "Idli Sambar (South Indian)", image: "https://placehold.co/400x300/dcfce7/64748b?text=Idli+Sambar", sourceUrl: "#", extendedIngredients: [{ original: "idli batter" }, { original: "lentils" }, { original: "mixed vegetables" }, { original: "tamarind" }, { original: "sambar powder" }] },
+        { id: 5, title: "Chinese Fried Rice", image: "https://placehold.co/400x300/ffe4e6/64748b?text=Fried+Rice", sourceUrl: "#", extendedIngredients: [{ original: "cooked rice" }, { original: "eggs" }, { original: "carrots" }, { original: "peas" }, { original: "soy sauce" }] },
+        { id: 6, title: "Manchurian (Chinese)", image: "https://placehold.co/400x300/ffe4e6/64748b?text=Manchurian", sourceUrl: "#", extendedIngredients: [{ original: "cabbage" }, { original: "all-purpose flour" }, { original: "cornflour" }, { original: "onions" }, { original: "capsicum" }] },
+        { id: 7, title: "Pasta with Marinara Sauce (Italian)", image: "https://placehold.co/400x300/dbeafe/64748b?text=Pasta+Marinara", sourceUrl: "#", extendedIngredients: [{ original: "1 box pasta" }, { original: "1 jar marinara sauce" }, { original: "garlic" }, { original: "oregano" }] },
+        { id: 8, title: "Margherita Pizza (Italian)", image: "https://placehold.co/400x300/dbeafe/64748b?text=Margherita+Pizza", sourceUrl: "#", extendedIngredients: [{ original: "pizza dough" }, { original: "tomato sauce" }, { original: "mozzarella cheese" }, { original: "fresh basil" }] },
+        { id: 9, title: "Vegetable Soup", image: "https://placehold.co/400x300/d1fae5/64748b?text=Vegetable+Soup", sourceUrl: "#", extendedIngredients: [{ original: "vegetable broth" }, { original: "carrots" }, { original: "celery" }, { original: "potatoes" }] },
+        { id: 10, title: "Lentil Soup", image: "https://placehold.co/400x300/d1fae5/64748b?text=Lentil+Soup", sourceUrl: "#", extendedIngredients: [{ original: "red lentils" }, { original: "onion" }, { original: "garlic" }, { original: "vegetable broth" }] },
+        { id: 11, title: "Dal Tadka (Indian)", image: "https://placehold.co/400x300/e0e7ff/64748b?text=Dal+Tadka", sourceUrl: "#", extendedIngredients: [{ original: "yellow lentils" }, { original: "ghee" }, { original: "cumin seeds" }, { original: "turmeric" }, { original: "coriander leaves" }] },
+        { id: 12, title: "Palak Paneer (Indian)", image: "https://placehold.co/400x300/e0e7ff/64748b?text=Palak+Paneer", sourceUrl: "#", extendedIngredients: [{ original: "spinach (palak)" }, { original: "paneer cubes" }, { original: "onion" }, { original: "garlic" }, { original: "spices" }] },
+        { id: 13, title: "Aloo Gobi (Indian)", image: "https://placehold.co/400x300/e0e7ff/64748b?text=Aloo+Gobi", sourceUrl: "#", extendedIngredients: [{ original: "potatoes (aloo)" }, { original: "cauliflower (gobi)" }, { original: "turmeric" }, { original: "cumin seeds" }, { original: "coriander powder" }] },
+        { id: 14, title: "Chana Masala (Indian)", image: "https://placehold.co/400x300/e0e7ff/64748b?text=Chana+Masala", sourceUrl: "#", extendedIngredients: [{ original: "chickpeas (chana)" }, { original: "tomato puree" }, { original: "onions" }, { original: "garlic" }, { original: "chana masala powder" }] },
+        { id: 15, title: "Lemon Rice (South Indian)", image: "https://placehold.co/400x300/dcfce7/64748b?text=Lemon+Rice", sourceUrl: "#", extendedIngredients: [{ original: "cooked rice" }, { original: "lemon juice" }, { original: "mustard seeds" }, { original: "curry leaves" }, { original: "peanuts" }] },
+        { id: 16, title: "Vegetable Korma (South Indian)", image: "https://placehold.co/400x300/dcfce7/64748b?text=Veg+Korma", sourceUrl: "#", extendedIngredients: [{ original: "mixed vegetables" }, { original: "coconut milk" }, { original: "cashews" }, { original: "green chilies" }, { original: "spices" }] },
+        { id: 17, title: "Sweet and Sour Chicken (Chinese)", image: "https://placehold.co/400x300/ffe4e6/64748b?text=Sweet+Sour+Chicken", sourceUrl: "#", extendedIngredients: [{ original: "chicken breast" }, { original: "pineapple chunks" }, { original: "bell peppers" }, { original: "vinegar" }, { original: "sugar" }] },
+        { id: 18, title: "Kung Pao Chicken (Chinese)", image: "https://placehold.co/400x300/ffe4e6/64748b?text=Kung+Pao+Chicken", sourceUrl: "#", extendedIngredients: [{ original: "chicken cubes" }, { original: "peanuts" }, { original: "soy sauce" }, { original: "dried chilies" }, { original: "Sichuan peppercorns" }] },
+        { id: 19, title: "Minestrone Soup (Italian)", image: "https://placehold.co/400x300/dbeafe/64748b?text=Minestrone+Soup", sourceUrl: "#", extendedIngredients: [{ original: "vegetable broth" }, { original: "pasta" }, { original: "beans" }, { original: "carrots" }, { original: "celery" }] },
+        { id: 20, title: "Tomato Basil Soup", image: "https://placehold.co/400x300/d1fae5/64748b?text=Tomato+Soup", sourceUrl: "#", extendedIngredients: [{ original: "canned tomatoes" }, { original: "vegetable broth" }, { original: "fresh basil" }, { original: "onions" }, { original: "garlic" }] },
+        { id: 21, title: "Chicken Noodle Soup", image: "https://placehold.co/400x300/d1fae5/64748b?text=Chicken+Noodle+Soup", sourceUrl: "#", extendedIngredients: [{ original: "chicken broth" }, { original: "chicken pieces" }, { original: "egg noodles" }, { original: "carrots" }, { original: "celery" }] }
+    ];
+
+    const ingredientInput = document.getElementById('ingredient-input');
+    const searchBtn = document.getElementById('search-btn');
+    const loadingDiv = document.getElementById('loading');
+    const errorDiv = document.getElementById('error-message');
+    const recipeListDiv = document.getElementById('recipe-list');
+    const mealPlanListDiv = document.getElementById('meal-plan-list');
+    const generateBtn = document.getElementById('generate-btn');
+    const modal = document.getElementById('modal');
+    const modalContent = document.getElementById('modal-content');
+    const closeModalBtn = document.getElementById('close-modal-btn');
+
+    let mealPlan = [];
+    let fetchedRecipes = [];
+
+    searchBtn.addEventListener('click', () => {
+        const ingredients = ingredientInput.value.trim();
+        fetchRecipes(ingredients);
+    });
+
+    ingredientInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            searchBtn.click();
+        }
+    });
+
+    generateBtn.addEventListener('click', showMealPlanModal);
+    closeModalBtn.addEventListener('click', () => { modal.classList.add('hidden'); });
+    modal.addEventListener('click', (e) => {
+        if (e.target.id === 'modal') {
+            modal.classList.add('hidden');
+        }
+    });
+
+    function fetchRecipes(query) {
+        loadingDiv.classList.remove('hidden');
+        errorDiv.classList.add('hidden');
+        recipeListDiv.innerHTML = '';
+        fetchedRecipes = [];
+
+        setTimeout(() => {
+            const results = localRecipes.filter(recipe =>
+                recipe.title.toLowerCase().includes(query.toLowerCase()) ||
+                recipe.extendedIngredients.some(ing => ing.original.toLowerCase().includes(query.toLowerCase()))
+            );
+
+            if (results.length > 0) {
+                fetchedRecipes = results;
+                displayRecipes(fetchedRecipes);
+            } else {
+                errorDiv.textContent = 'No recipes found for your ingredients. Try different ones!';
+                errorDiv.classList.remove('hidden');
+            }
+            loadingDiv.classList.add('hidden');
+        }, 500);
+    }
+
+    function displayRecipes(recipes) {
+        recipeListDiv.innerHTML = '';
+        recipes.forEach(recipe => {
+            const recipeCard = document.createElement('div');
+            const colorClass = getColorForRecipe(recipe.title);
+            recipeCard.classList.add('light-card', 'p-4', 'flex', 'flex-col', 'items-center', 'text-center', colorClass);
+            recipeCard.innerHTML = `
+                <img src="${recipe.image}" alt="${recipe.title}" class="w-full h-40 object-cover rounded-xl mb-4 border-2 border-gray-300">
+                <h3 class="text-lg font-semibold mb-2">${recipe.title}</h3>
+                <button class="add-to-plan-btn btn btn-secondary w-full">Add to Plan</button>
+            `;
+
+            recipeCard.querySelector('.add-to-plan-btn').addEventListener('click', () => {
+                addToMealPlan(recipe);
+            });
+
+            recipeListDiv.appendChild(recipeCard);
+        });
+    }
+
+    function getColorForRecipe(title) {
+        const lowerTitle = title.toLowerCase();
+        if (lowerTitle.includes("indian") || lowerTitle.includes("masala") || lowerTitle.includes("biryani") || lowerTitle.includes("dal")) {
+            return 'card-indian';
+        }
+        if (lowerTitle.includes("south indian") || lowerTitle.includes("dosa") || lowerTitle.includes("idli") || lowerTitle.includes("sambar")) {
+            return 'card-south-indian';
+        }
+        if (lowerTitle.includes("chinese") || lowerTitle.includes("manchurian") || lowerTitle.includes("fried rice")) {
+            return 'card-chinese';
+        }
+        if (lowerTitle.includes("italian") || lowerTitle.includes("pasta") || lowerTitle.includes("pizza") || lowerTitle.includes("marinara")) {
+            return 'card-italian';
+        }
+        if (lowerTitle.includes("soup") || lowerTitle.includes("lentil") || lowerTitle.includes("tomato") || lowerTitle.includes("noodle")) {
+            return 'card-soup';
+        }
+        return 'bg-white border-gray-200';
+    }
+
+    function addToMealPlan(recipe) {
+        if (mealPlan.find(item => item.id === recipe.id)) {
+            return;
+        }
+
+        mealPlan.push(recipe);
+        updateMealPlanUI();
+
+        const recipeCard = document.querySelector(`[alt="${recipe.title}"]`).closest('.light-card');
+        const button = recipeCard.querySelector('.add-to-plan-btn');
+        const originalText = button.textContent;
+        button.textContent = 'Added!';
+        button.classList.remove('btn-secondary');
+        button.classList.add('bg-green-500', 'text-white');
+        button.disabled = true;
+
+        setTimeout(() => {
+            button.textContent = originalText;
+            button.classList.add('btn-secondary');
+            button.classList.remove('bg-green-500', 'text-white');
+            button.disabled = false;
+        }, 1000);
+    }
+
+    function updateMealPlanUI() {
+        mealPlanListDiv.innerHTML = '';
+        mealPlan.forEach((recipe, index) => {
+            const colorClass = getColorForRecipe(recipe.title).replace('card-', 'item-');
+            const mealItem = document.createElement('div');
+            mealItem.classList.add('flex', 'items-center', 'gap-4', 'p-3', 'rounded-xl', 'relative', colorClass);
+            mealItem.innerHTML = `
+                <img src="${recipe.image}" alt="${recipe.title}" class="w-10 h-10 object-cover rounded-md border-2 border-gray-300">
+                <span class="flex-1 text-gray-800 text-sm font-medium">${recipe.title}</span>
+                <button class="remove-btn text-gray-400 hover:text-red-500 absolute top-1 right-2">&times;</button>
+            `;
+            mealItem.querySelector('.remove-btn').addEventListener('click', () => {
+                mealPlan.splice(index, 1);
+                updateMealPlanUI();
+            });
+            mealPlanListDiv.appendChild(mealItem);
+        });
+        if (mealPlan.length > 0) {
+            generateBtn.classList.remove('bg-gray-400', 'text-white');
+            generateBtn.classList.add('btn-primary');
+            generateBtn.disabled = false;
+        } else {
+            generateBtn.classList.remove('btn-primary');
+            generateBtn.classList.add('bg-gray-400', 'text-white');
+            generateBtn.disabled = true;
+        }
+    }
+
+    function showMealPlanModal() {
+        if (mealPlan.length === 0) {
+            return;
+        }
+
+        let htmlContent = `<div class="space-y-4">`;
+        mealPlan.forEach(recipe => {
+            const colorClass = getColorForRecipe(recipe.title).replace('card-', 'modal-item-');
+            htmlContent += `
+                <div class="p-4 rounded-xl shadow-sm border-2 ${colorClass}">
+                    <h4 class="font-bold text-lg mb-1">${recipe.title}</h4>
+                    <p class="text-sm font-medium mt-2">Ingredients:</p>
+                    <ul class="list-disc list-inside text-sm text-gray-700">
+                        ${recipe.extendedIngredients.map(ingredient => `<li>${ingredient.original}</li>`).join('')}
+                    </ul>
+                    <div class="mt-3">
+                        <a href="${recipe.sourceUrl}" target="_blank" class="text-blue-600 hover:underline text-sm font-medium">View Full Recipe</a>
+                    </div>
+                </div>
+            `;
+        });
+        htmlContent += `</div>`;
+        modalContent.innerHTML = htmlContent;
+        modal.classList.remove('hidden');
+    }
+
+    function copyMealPlan() {
+        let textToCopy = "My Weekly Meal Plan:\n\n";
+        mealPlan.forEach((recipe, index) => {
+            textToCopy += `${index + 1}. ${recipe.title}\n`;
+            textToCopy += `   Ingredients: ${recipe.extendedIngredients.map(ingredient => ingredient.original).join(', ')}\n`;
+            textToCopy += `   Link: ${recipe.sourceUrl}\n\n`;
+        });
+
+        const textarea = document.createElement('textarea');
+        textarea.value = textToCopy;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+
+        const originalText = generateBtn.textContent;
+        generateBtn.textContent = 'Copied!';
+        generateBtn.classList.remove('btn-primary');
+        generateBtn.classList.add('bg-green-500');
+        setTimeout(() => {
+            generateBtn.textContent = originalText;
+            generateBtn.classList.add('btn-primary');
+            generateBtn.classList.remove('bg-green-500');
+        }, 1000);
+    }
+
+    updateMealPlanUI();
+</script>
+</body>
+</html>
